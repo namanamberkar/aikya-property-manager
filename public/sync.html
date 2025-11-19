@@ -218,7 +218,7 @@
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Sync API URL</label>
-                    <input type="text" id="api-url" placeholder="https://your-vercel-app.vercel.app/api/sync" 
+                    <input type="text" id="api-url" placeholder="https://aikya-property-manager.vercel.app/api/sync" 
                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
@@ -246,7 +246,7 @@
         // Configuration
         let config = {
             sheetsUrl: '',
-            apiUrl: 'https://your-vercel-app.vercel.app/api/sync'
+            apiUrl: 'https://aikya-property-manager.vercel.app/api/sync'
         };
 
         // Initialize the page
@@ -279,7 +279,7 @@
             localStorage.removeItem('aikya-sync-config');
             config = {
                 sheetsUrl: '',
-                apiUrl: 'https://your-vercel-app.vercel.app/api/sync'
+                apiUrl: 'https://aikya-property-manager.vercel.app/api/sync'
             };
             document.getElementById('sheets-url').value = '';
             document.getElementById('api-url').value = config.apiUrl;
