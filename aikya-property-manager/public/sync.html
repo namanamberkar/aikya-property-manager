@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Sync - Aikya Properties</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --primary-dark: #3730a3;
+            --secondary: #0ea5e9;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success) 0%, #22c55e 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status-synced { background: #d1fae5; color: #065f46; }
+        .status-pending { background: #fef3c7; color: #b45309; }
+        .status-failed { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="min-h-screen antialiased">
+    <div class="max-w-4xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+<header class="mb-8 text-center">
+    <a href="index.html" class="inline-block mb-4">
+        <button class="btn-primary px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Main App
+        </button>
+    </a>
+    <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 flex items-center justify-center">
+        <div class="bg-gradient-to-br from-indigo-500 to-blue-600 p-3 rounded-xl mr-4 shadow-lg">
+            <i class="fas fa-sync-alt text-white text-2xl"></i>
+        </div>
+        Google Sheets Sync Center
+    </h1>
+    <p class="text-gray-600 mt-2 text-lg">Two-way synchronization between Supabase and Google Sheets</p>
+</header>
+
+        <!-- Connection Status -->
+        <div class="glass-card rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Connection Status</h2>
+                <button onclick="testConnections()" class="btn-primary px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plug mr-2"></i> Test Connections
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Supabase Status -->
+                <div class="p-4 border-2 border-green-200 rounded-xl bg-green-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-database text-green-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-green-800">Supabase</h3>
+                                <p class="text-green-600 text-sm">Database Connection</p>
+                            </div>
+                        </div>
+                        <div id="supabase-status" class="flex items-center">
+                            <div class="loading-spinner mr-2"></div>
+                            <span class="text-gray-600">Testing...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Google Sheets Status -->
+                <div class="p-4 border-2 border-blue-200 rounded-xl bg-blue-50">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fas fa-file-excel text-blue-600 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-blue-800">Google Sheets</h3>
+                                <p class="text-blue-600 text-sm">Spreadsheet Connection</p>
+                            </div>
+                        </div>
+                        <div id="sheets-status" class="flex items-center">
+                            <div class="loading-spinner mr-2"></div>
+                            <span class="text-gray-600">Testing...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Controls -->
+        <div class="glass-card rounded-2xl p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Sync Operations</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button onclick="pullFromSheets()" class="btn-primary p-4 rounded-xl flex flex-col items-center justify-center h-32 transition-all hover:scale-105">
+                    <i class="fas fa-download text-3xl mb-2"></i>
+                    <span class="font-semibold">Pull from Sheets</span>
+                    <span class="text-sm opacity-80 mt-1">Sheets → Supabase</span>
+                </button>
+                
+                <button onclick="pushToSheets()" class="btn-success p-4 rounded-xl flex flex-col items-center justify-center h-32 transition-all hover:scale-105">
+                    <i class="fas fa-upload text-3xl mb-2"></i>
+                    <span class="font-semibold">Push to Sheets</span>
+                    <span class="text-sm opacity-80 mt-1">Supabase → Sheets</span>
+                </button>
+                
+                <button onclick="fullSync()" class="bg-gradient-to-br from-purple-500 to-pink-600 text-white p-4 rounded-xl flex flex-col items-center justify-center h-32 transition-all hover:scale-105">
+                    <i class="fas fa-sync-alt text-3xl mb-2"></i>
+                    <span class="font-semibold">Full Sync</span>
+                    <span class="text-sm opacity-80 mt-1">Two-way Sync</span>
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="sync-progress" class="hidden mb-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-2">
+                    <span id="sync-status">Initializing...</span>
+                    <span id="sync-percentage">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="progress-bar" class="bg-green-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Log -->
+        <div class="glass-card rounded-2xl p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Sync Log</h2>
+            
+            <div class="bg-gray-50 rounded-xl p-4 max-h-96 overflow-y-auto">
+                <div id="sync-log" class="space-y-3">
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-history text-3xl mb-2 opacity-50"></i>
+                        <p>Sync operations will appear here</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between items-center mt-4">
+                <button onclick="clearLog()" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition">
+                    <i class="fas fa-trash mr-2"></i> Clear Log
+                </button>
+                <button onclick="exportLog()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-download mr-2"></i> Export Log
+                </button>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="glass-card rounded-2xl p-6 mt-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Configuration</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Google Sheets URL</label>
+                    <input type="text" id="sheets-url" placeholder="https://docs.google.com/spreadsheets/d/..." 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sync API URL</label>
+                    <input type="text" id="api-url" placeholder="https://your-vercel-app.vercel.app/api/sync" 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            
+            <div class="mt-4 flex gap-4">
+                <button onclick="saveConfig()" class="btn-primary px-4 py-2 rounded-lg">
+                    <i class="fas fa-save mr-2"></i> Save Configuration
+                </button>
+                <button onclick="resetConfig()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-undo mr-2"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Toast -->
+    <div id="message-toast" class="fixed bottom-4 right-4 z-50 transition-transform duration-300 ease-out translate-y-full opacity-0 max-w-sm">
+        <div class="bg-gray-800 text-white p-4 rounded-lg shadow-2xl flex items-center space-x-3">
+            <i id="toast-icon" class="text-xl"></i>
+            <span id="toast-text" class="font-medium"></span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        let config = {
+            sheetsUrl: '',
+            apiUrl: 'https://your-vercel-app.vercel.app/api/sync'
+        };
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            testConnections();
+        });
+
+        // Load configuration from localStorage
+        function loadConfig() {
+            const savedConfig = localStorage.getItem('aikya-sync-config');
+            if (savedConfig) {
+                config = { ...config, ...JSON.parse(savedConfig) };
+                document.getElementById('sheets-url').value = config.sheetsUrl || '';
+                document.getElementById('api-url').value = config.apiUrl || '';
+            }
+        }
+
+        // Save configuration to localStorage
+        function saveConfig() {
+            config.sheetsUrl = document.getElementById('sheets-url').value;
+            config.apiUrl = document.getElementById('api-url').value;
+            
+            localStorage.setItem('aikya-sync-config', JSON.stringify(config));
+            showMessage('Configuration saved successfully!', 'success');
+        }
+
+        // Reset configuration
+        function resetConfig() {
+            localStorage.removeItem('aikya-sync-config');
+            config = {
+                sheetsUrl: '',
+                apiUrl: 'https://your-vercel-app.vercel.app/api/sync'
+            };
+            document.getElementById('sheets-url').value = '';
+            document.getElementById('api-url').value = config.apiUrl;
+            showMessage('Configuration reset to defaults', 'info');
+        }
+
+        // Test connections
+        async function testConnections() {
+            // Test Supabase connection
+            const supabaseStatus = document.getElementById('supabase-status');
+            supabaseStatus.innerHTML = '<div class="loading-spinner mr-2"></div><span class="text-gray-600">Testing...</span>';
+            
+            // Test Google Sheets connection
+            const sheetsStatus = document.getElementById('sheets-status');
+            sheetsStatus.innerHTML = '<div class="loading-spinner mr-2"></div><span class="text-gray-600">Testing...</span>';
+
+            try {
+                // Test Supabase
+                const supabaseTest = await fetch('https://fiqlikvsoqqlcbbtsmwl.supabase.co/rest/v1/', {
+                    headers: {
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpcWxpa3Zzb3FxbGNiYnRzbXdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0OTY5NTgsImV4cCI6MjA3ODA3Mjk1OH0.ESMTiXRhIYnsMJ34XYESHrTyt-U1YtIENXWCDCwWleM'
+                    }
+                });
+
+                if (supabaseTest.ok) {
+                    supabaseStatus.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i><span class="text-green-600">Connected</span>';
+                } else {
+                    throw new Error('Supabase connection failed');
+                }
+
+                // Test Google Sheets (via our API)
+                if (config.apiUrl) {
+                    const sheetsTest = await fetch(config.apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'test' })
+                    });
+
+                    if (sheetsTest.ok) {
+                        sheetsStatus.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-2"></i><span class="text-green-600">Connected</span>';
+                    } else {
+                        throw new Error('Sheets API connection failed');
+                    }
+                } else {
+                    sheetsStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i><span class="text-yellow-600">API URL not set</span>';
+                }
+
+            } catch (error) {
+                console.error('Connection test failed:', error);
+                supabaseStatus.innerHTML = '<i class="fas fa-times-circle text-red-500 mr-2"></i><span class="text-red-600">Failed</span>';
+                sheetsStatus.innerHTML = '<i class="fas fa-times-circle text-red-500 mr-2"></i><span class="text-red-600">Failed</span>';
+                showMessage('Connection test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Sync functions
+        async function callSyncAPI(action) {
+            if (!config.apiUrl) {
+                showMessage('Please set the API URL in configuration first', 'error');
+                return;
+            }
+
+            showProgress(true);
+            updateProgress('Starting sync...', 0);
+
+            try {
+                updateProgress(`Executing ${action}...`, 30);
+                
+                const response = await fetch(config.apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: action,
+                        spreadsheetId: extractSpreadsheetId(config.sheetsUrl)
+                    })
+                });
+
+                updateProgress('Processing response...', 70);
+
+                const result = await response.json();
+
+                if (result.success) {
+                    updateProgress('Sync completed successfully', 100);
+                    addLogEntry(action, 'success', result.message);
+                    showMessage(`Sync successful: ${result.message}`, 'success');
+                } else {
+                    throw new Error(result.error || 'Sync failed');
+                }
+
+            } catch (error) {
+                updateProgress('Sync failed', 100);
+                addLogEntry(action, 'error', error.message);
+                showMessage(`Sync failed: ${error.message}`, 'error');
+            } finally {
+                setTimeout(() => showProgress(false), 2000);
+            }
+        }
+
+        // Individual sync functions
+        async function pullFromSheets() {
+            await callSyncAPI('sheets-to-supabase');
+        }
+
+        async function pushToSheets() {
+            await callSyncAPI('supabase-to-sheets');
+        }
+
+        async function fullSync() {
+            await callSyncAPI('full-sync');
+        }
+
+        // Progress tracking
+        function showProgress(show) {
+            const progress = document.getElementById('sync-progress');
+            progress.classList.toggle('hidden', !show);
+        }
+
+        function updateProgress(status, percentage) {
+            document.getElementById('sync-status').textContent = status;
+            document.getElementById('sync-percentage').textContent = percentage + '%';
+            document.getElementById('progress-bar').style.width = percentage + '%';
+        }
+
+        // Log management
+        function addLogEntry(action, status, message) {
+            const log = document.getElementById('sync-log');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const statusClass = status === 'success' ? 'status-synced' : 
+                              status === 'error' ? 'status-failed' : 'status-pending';
+            
+            const statusIcon = status === 'success' ? 'fa-check-circle' :
+                             status === 'error' ? 'fa-times-circle' : 'fa-sync-alt';
+            
+            const entry = document.createElement('div');
+            entry.className = `p-3 rounded-lg border ${statusClass}`;
+            entry.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas ${statusIcon} mr-3"></i>
+                        <div>
+                            <div class="font-semibold">${action}</div>
+                            <div class="text-sm opacity-80">${message}</div>
+                        </div>
+                    </div>
+                    <div class="text-sm opacity-70">${timestamp}</div>
+                </div>
+            `;
+            
+            // Add to top of log
+            log.insertBefore(entry, log.firstChild);
+            
+            // Keep only last 50 entries
+            const entries = log.children;
+            if (entries.length > 50) {
+                log.removeChild(entries[entries.length - 1]);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('sync-log').innerHTML = `
+                <div class="text-center text-gray-500 py-8">
+                    <i class="fas fa-history text-3xl mb-2 opacity-50"></i>
+                    <p>Sync operations will appear here</p>
+                </div>
+            `;
+            showMessage('Log cleared', 'info');
+        }
+
+        function exportLog() {
+            const logEntries = document.getElementById('sync-log').children;
+            let logText = 'Aikya Properties Sync Log\n';
+            logText += 'Generated: ' + new Date().toLocaleString() + '\n\n';
+            
+            for (let entry of logEntries) {
+                const text = entry.textContent;
+                if (text.includes('Sync operations will appear here')) continue;
+                logText += text + '\n';
+            }
+            
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aikya-sync-log-${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showMessage('Log exported successfully', 'success');
+        }
+
+        // Utility functions
+        function extractSpreadsheetId(url) {
+            if (!url) return null;
+            const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            return match ? match[1] : null;
+        }
+
+        function showMessage(text, type) {
+            const toast = document.getElementById('message-toast');
+            const icon = document.getElementById('toast-icon');
+            const message = document.getElementById('toast-text');
+            
+            let bgColor = 'bg-gray-800';
+            let iconClass = 'fas fa-info-circle';
+            
+            switch (type) {
+                case 'success':
+                    bgColor = 'bg-green-600';
+                    iconClass = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-600';
+                    iconClass = 'fas fa-exclamation-triangle';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-600';
+                    iconClass = 'fas fa-exclamation-circle';
+                    break;
+            }
+            
+            toast.className = `fixed bottom-4 right-4 z-50 transition-transform duration-300 ease-out translate-y-full opacity-0 max-w-sm ${bgColor} text-white p-4 rounded-lg shadow-2xl flex items-center space-x-3`;
+            icon.className = `${iconClass} text-xl`;
+            message.textContent = text;
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-full', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 50);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 4000);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 3700);
+        }
+    </script>
+</body>
+</html>
